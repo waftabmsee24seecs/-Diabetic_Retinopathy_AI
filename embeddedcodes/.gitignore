@@ -1,0 +1,15 @@
+# Ignore Python virtual environment
+venv/
+
+# Ignore uploaded images
+Uploaded Images/
+
+# Optional: common Python ignores
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.swo
+*.DS_Store
+
