@@ -1,8 +1,8 @@
 # Ignore Python virtual environment
-venv/
+embeddedcodes/venv/
 
 # Ignore uploaded images
-Uploaded Images/
+embeddedcodes/uploadedimages/
 
 # Optional: common Python ignores
 __pycache__/
