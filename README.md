@@ -4,6 +4,15 @@ Welcome to **VisionAI**, an intelligent healthcare application designed to detec
 
 ---
 
+## 🗂️ Repository Structure & Branch Workflow
+
+This repository follows a clean and stable branching strategy to support development, testing, and long-term maintenance of the VisionAI project.
+
+- **main** — Stable, production-ready version of the VisionAI app.  
+- **development** — Active development branch for upcoming features and improvements.  
+- **code-and-simulation** — Experimental branch for model testing, simulations, and research trials.
+
+
 ## 🌟 Project Overview
 
 VisionAI is designed to assist healthcare professionals and researchers by automating retina and DR detection. The app workflow is simple:
@@ -47,7 +56,7 @@ The application features a **modern, horizontal layout**, interactive **blue-the
 - Web Cam
 - Streamlit
 - OpenCV 
-- TensorFlow or PyTorch (depending on your model)
+- TensorFlow or PyTorch
 - NumPy
 - Pandas (optional, if used in preprocessing)
 - Pillow (for image handling)
@@ -62,7 +71,7 @@ The application features a **modern, horizontal layout**, interactive **blue-the
 
 #### Create and activate a Python virtual environment:
 
-
+    cd embeddedcodes/
     python3.8 -m venv venv
     source ./venv/bin/activate
 
