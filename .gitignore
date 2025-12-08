@@ -1,0 +1,17 @@
+# Ignore Python virtual environment
+src/codes/venv/
+
+# Ignore model files
+src/codes/*.h5
+src/codes/*.weights.h5
+src/codes/*.json
+
+# Python junk
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.swo
+*.DS_Store
+
