@@ -7,6 +7,12 @@ src/codes/*.weights.h5
 src/codes/*.json
 
 # Python junk
+embeddedcodes/venv/
+
+# Ignore uploaded images
+embeddedcodes/uploadedimages/
+
+# Optional: common Python ignores
 __pycache__/
 *.pyc
 *.pyo
