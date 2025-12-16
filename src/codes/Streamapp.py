@@ -1,223 +1,3 @@
-# import os
-# import cv2
-# import numpy as np
-# from PIL import Image
-# import streamlit as st
-# from tensorflow import keras
-# import tensorflow as tf
-# from tensorflow.keras import mixed_precision
-# from tensorflow.keras.applications.efficientnet import preprocess_input
-# import json
-
-# # ==========================================================
-# #  MIXED PRECISION (matching training)
-# # ==========================================================
-# mixed_precision.set_global_policy("mixed_float16")
-# print("Mixed precision enabled (float16).")
-
-# # ==========================================================
-# #  QWK METRIC (needed for JSON model loading)
-# # ==========================================================
-# class QWK_Metric(tf.keras.metrics.Metric):
-#     def __init__(self, num_classes=5, name="qwk", **kwargs):
-#         super().__init__(name=name, **kwargs)
-#         self.num_classes = num_classes
-#         self.cm = self.add_weight(name="cm", shape=(num_classes, num_classes),
-#                                   initializer="zeros", dtype=tf.float32)
-
-#     def update_state(self, y_true, y_pred, sample_weight=None):
-#         y_true = tf.argmax(y_true, 1)
-#         y_pred = tf.argmax(y_pred, 1)
-#         m = tf.math.confusion_matrix(y_true, y_pred, num_classes=self.num_classes, dtype=tf.float32)
-#         self.cm.assign_add(m)
-
-#     def result(self):
-#         cm = self.cm
-#         w = tf.zeros_like(cm)
-#         for i in range(self.num_classes):
-#             for j in range(self.num_classes):
-#                 w = tf.tensor_scatter_nd_update(w, [[i,j]], [(i-j)**2 / (self.num_classes-1)**2])
-#         act = tf.reduce_sum(cm, 1)
-#         pred = tf.reduce_sum(cm, 0)
-#         expected = tf.tensordot(act, pred, axes=0) / tf.reduce_sum(cm)
-#         return 1 - tf.reduce_sum(w*cm) / tf.reduce_sum(w*expected)
-
-#     def reset_state(self):
-#         self.cm.assign(tf.zeros_like(self.cm))
-
-# # ==========================================================
-# #  STREAMLIT CONFIG
-# # ==========================================================
-# st.set_page_config(
-#     page_title="👁️ Diabetic Retinopathy AI Diagnostic Tool",
-#     layout="wide"
-# )
-
-# # ==========================================================
-# #  PATHS
-# # ==========================================================
-# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# RETINA_MODEL_PATH = os.path.join(BASE_DIR, "retina_model.h5")  # Your model1
-# SEVERITY_ARCH_PATH = os.path.join(BASE_DIR, "b4_model_architecture.json")
-# SEVERITY_WEIGHTS_PATH = os.path.join(BASE_DIR, "b4_final.weights.h5")
-
-# # ==========================================================
-# #  MODEL LOADING
-# # ==========================================================
-# @st.cache_resource
-# def load_retina_model():
-#     print("Loading retina vs non-retina model...")
-#     model = keras.models.load_model(RETINA_MODEL_PATH)
-#     print("Retina model loaded.")
-#     return model
-
-# @st.cache_resource
-# def load_severity_model():
-#     print("Loading DR severity model...")
-#     with open(SEVERITY_ARCH_PATH, "r") as f:
-#         json_arch = f.read()
-#     model = keras.models.model_from_json(json_arch, custom_objects={"QWK_Metric": QWK_Metric})
-#     model.load_weights(SEVERITY_WEIGHTS_PATH)
-#     print("Severity model loaded.")
-#     return model
-
-# retina_model = load_retina_model()
-# severity_model = load_severity_model()
-
-# # ==========================================================
-# #  IMAGE PREPROCESSING
-# # ==========================================================
-# IMG_SIZE = (300, 300)
-
-# def preprocess_image_retina(img):
-#     img = img.resize(IMG_SIZE)
-#     img = np.array(img).astype(np.float32)
-#     img = np.expand_dims(img, axis=0)
-#     return img
-
-# def preprocess_image_severity(img):
-#     img = img.resize(IMG_SIZE)
-#     img = np.array(img).astype(np.float32)
-#     img = preprocess_input(img)
-#     img = np.expand_dims(img, axis=0)
-#     return img
-
-# # ==========================================================
-# #  PREDICTION FUNCTIONS
-# # ==========================================================
-# def predict_retina(img):
-#     x = preprocess_image_retina(img)
-#     pred = retina_model.predict(x)
-#     label = ["non-retinal", "retinal"][int(np.argmax(pred))]
-#     confidence = float(np.max(pred))
-#     return label, confidence
-
-# def predict_severity(img):
-#     x = preprocess_image_severity(img)
-#     pred = severity_model.predict(x)
-#     classes = ["No DR", "Mild DR", "Moderate DR", "Severe DR", "Proliferative DR"]
-#     label = classes[int(np.argmax(pred))]
-#     confidence = float(np.max(pred))
-#     return label, confidence
-
-# # ==========================================================
-# #  STREAMLIT UI & CSS
-# # ==========================================================
-# st.markdown("""
-# <style>
-# /* Add your File2 custom CSS here (for brevity omitted, keep your existing CSS) */
-# </style>
-# """, unsafe_allow_html=True)
-
-# st.markdown("<div class='stCard'>", unsafe_allow_html=True)
-# st.title("👁️ Diabetic Retinopathy AI Diagnostic Tool")
-# st.markdown("Upload a fundus image to analyze retina presence and DR severity.")
-# st.markdown("</div>", unsafe_allow_html=True)
-
-# # ==========================================================
-# #  IMAGE UPLOAD OR CAMERA INPUT
-# # ==========================================================
-# if 'input_mode' not in st.session_state:
-#     st.session_state.input_mode = None
-
-# image_input = None
-
-# if st.session_state.input_mode is None:
-#     col1, col2 = st.columns(2)
-#     with col1:
-#         if st.button("⬆️ Upload an Image File"):
-#             st.session_state.input_mode = "file"
-#             st.stop()  # replaces experimental_rerun
-#     with col2:
-#         if st.button("📸 Capture with Camera"):
-#             st.session_state.input_mode = "camera"
-#             st.stop()  # replaces experimental_rerun
-
-# elif st.session_state.input_mode == "file":
-#     col_input, col_reset = st.columns([4,1])
-#     with col_input:
-#         image_input = st.file_uploader("Choose an image file...", type=["jpg","jpeg","png"])
-#     with col_reset:
-#         if st.button("Change Input"):
-#             st.session_state.input_mode = None
-#             st.stop()  # replaces experimental_rerun
-
-# elif st.session_state.input_mode == "camera":
-#     col_input, col_reset = st.columns([4,1])
-#     with col_input:
-#         image_input = st.camera_input("Take a photo of the fundus image")
-#     with col_reset:
-#         if st.button("Change Input"):
-#             st.session_state.input_mode = None
-#             st.stop()  # replaces experimental_rerun
-
-# # ==========================================================
-# #  ANALYSIS & RESULTS
-# # ==========================================================
-# if image_input is not None:
-#     image = Image.open(image_input).convert("RGB")
-
-#     col_image, col_retina_result, col_severity_result = st.columns(3)
-
-#     with col_image:
-#         st.markdown("<div class='image-display-card'>", unsafe_allow_html=True)
-#         st.subheader("1. Input Image")
-#         st.image(image, use_container_width=True)
-#         st.markdown("</div>", unsafe_allow_html=True)
-
-#     with col_retina_result:
-#         st.markdown("<div class='result-card'>", unsafe_allow_html=True)
-#         st.subheader("2. Retina Check")
-#         label, conf = predict_retina(image)
-#         st.markdown(f"**Classification:** {label.upper()}")
-#         st.metric("Confidence", f"{conf*100:.2f}%")
-#         if label.lower() == "retinal":
-#             st.success("✅ Image is suitable for DR screening.")
-#         else:
-#             st.error("❌ Non-retinal image. DR screening aborted.")
-#         st.markdown("</div>", unsafe_allow_html=True)
-
-#     with col_severity_result:
-#         st.markdown("<div class='result-card'>", unsafe_allow_html=True)
-#         st.subheader("3. DR Severity")
-#         if label.lower() == "retinal":
-#             sev_label, sev_conf = predict_severity(image)
-#             css_class = sev_label.replace(" ","").replace("-","")
-#             st.markdown(f"<p class='severity-level {css_class}'><strong>{sev_label.upper()}</strong></p>", unsafe_allow_html=True)
-#             st.metric("Prediction Confidence", f"{sev_conf*100:.2f}%")
-#             st.success("✅ Full diagnosis complete.")
-#         else:
-#             st.info("Awaiting valid retinal image.")
-#         st.markdown("</div>", unsafe_allow_html=True)
-
-# else:
-#     st.info("⬆️ Select an input method above to start the diagnostic process.")
-
-
-#!/usr/bin/env python3
-# dr_app_streamlit.py
-# Single-file Streamlit app: local inference (no Flask), image saving, camera support,
-# enhanced visual output cards with colors and icons. Drop-in replacement for vis.py UI.
 import streamlit as st
 from PIL import Image
 import numpy as np
@@ -505,10 +285,8 @@ h3 { margin-top: 0px !important; }
 st.markdown(custom_css, unsafe_allow_html=True)
 
 # Title card (unchanged)
-st.markdown("<div class='stCard'>", unsafe_allow_html=True)
 st.title("👁️ Diabetic Retinopathy AI Diagnostic Tool")
 st.markdown("A demonstration interface for deep learning models used in ophthalmology.")
-st.markdown("</div>", unsafe_allow_html=True)
 
 # Sidebar content unchanged
 with st.sidebar:
@@ -522,7 +300,6 @@ with st.sidebar:
     st.markdown("Developed using Streamlit and TensorFlow. Models are loaded locally.")
 
 # Input selection UI 
-st.markdown("<div class='input-card'>", unsafe_allow_html=True)
 st.subheader("Select Image Input Method")
 
 image_input = None
@@ -569,7 +346,6 @@ elif st.session_state.input_mode == "camera":
             if st.button("Change Input", key="reset_camera", use_container_width=True):
                 st.session_state.input_mode = None
                 st.rerun()
-st.markdown("</div>", unsafe_allow_html=True) # End of the input-card div
 
 # --- Define Columns ONCE before the if/else block ---
 # Use a consistent set of names for the columns
@@ -601,10 +377,9 @@ if image_input is not None:
     # 2. Image Display (Col 1)
     with col_image:
         st.subheader("1. Input Image")
-        st.markdown("<div class='image-display-card'>", unsafe_allow_html=True)
         st.image(pil_img, use_container_width=True)
         st.caption(f"Saved to: {saved_path}")
-        st.markdown("</div>", unsafe_allow_html=True) 
+
 
     # 3. Retina Check (Col 2)
     with st.spinner("Analyzing image with AI models..."):
@@ -614,7 +389,6 @@ if image_input is not None:
 
     with col_retina_result:
         st.subheader("2. Retina Check (Stage 1)")
-        st.markdown("<div class='result-card'>", unsafe_allow_html=True)
 
         if result_label.lower() in ["retinal", "retina", "retinal image"]:
             bg = "#e6ffe6"
@@ -644,12 +418,10 @@ if image_input is not None:
         else:
             st_message("❌ Image is non-retinal. DR screening aborted.")
 
-        st.markdown("</div>", unsafe_allow_html=True)
 
     # 4. Severity (Col 3)
     with col_severity_result:
         st.subheader("3. DR Severity (Stage 2)")
-        st.markdown("<div class='result-card'>", unsafe_allow_html=True)
 
         if result_label.lower() == 'retinal':
             with st.spinner("Running DR severity model..."):
@@ -681,16 +453,12 @@ if image_input is not None:
         else:
             st.info("Awaiting valid retinal image from Stage 1.")
 
-        st.markdown("</div>", unsafe_allow_html=True)
-
 else:
     # Logic for when NO image is uploaded (Placeholders)
 
     # Placeholder 1: Input Image
     with col_image:
         st.subheader("1. Input Image")
-        # FIX: Use the same wrapper (image-display-card) for consistent styling
-        st.markdown("<div class='image-display-card' style='padding: 0;'>", unsafe_allow_html=True) 
         st.markdown(
             """
             <div style='background-color: #f0f2f6; color: #6c757d; padding: 60px 10px; border-radius: 12px; text-align: center; font-weight: 600; font-size: 1.2rem; min-height: 250px; display: flex; align-items: center; justify-content: center; height: 100%; border: 2px dashed #ced4da;'>
@@ -698,7 +466,6 @@ else:
             </div>
             """, unsafe_allow_html=True
         )
-        st.markdown("</div>", unsafe_allow_html=True) # Close the wrapper
         st.caption("Upload or capture an image above to begin analysis.")
 
 
@@ -706,17 +473,13 @@ else:
     with col_retina_result:
         st.subheader("2. Retina Check (Stage 1)")
         # FIX: Use the result-card wrapper for consistent height/look
-        st.markdown("<div class='result-card'>", unsafe_allow_html=True)
         st.info("Awaiting image upload to start analysis.")
-        st.markdown("</div>", unsafe_allow_html=True) 
 
     # Placeholder 3: DR Severity
     with col_severity_result:
         st.subheader("3. DR Severity (Stage 2)")
         # FIX: Use the result-card wrapper for consistent height/look
-        st.markdown("<div class='result-card'>", unsafe_allow_html=True)
         st.info("Awaiting valid result from Stage 1.")
-        st.markdown("</div>", unsafe_allow_html=True) 
 
 st.markdown("---")
 st.caption("Disclaimer: This tool is for demonstration purposes only and is not a substitute for professional medical advice.")
